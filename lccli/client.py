@@ -142,6 +142,8 @@ class LeetCodeClient:
             title_slug=question["titleSlug"],
             difficulty=question["difficulty"],
             content=question.get("translatedContent") or question.get("content") or "",
+            content_zh=question.get("translatedContent") or "",
+            content_en=question.get("content") or "",
             sample_test_case=question.get("sampleTestCase") or "",
             example_testcases=question.get("exampleTestcases") or "",
             meta_data=question.get("metaData") or "",

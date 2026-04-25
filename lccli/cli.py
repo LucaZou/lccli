@@ -134,8 +134,9 @@ def cmd_fetch(args: argparse.Namespace) -> int:
     lang = args.lang or config.default_lang
     workspace = Path(args.workspace or config.workspace).resolve()
     problem = client.question_by_slug(slug)
-    statement_path, solution_path = write_problem_files(workspace, problem, lang)
+    statement_path, statement_zh_path, solution_path = write_problem_files(workspace, problem, lang)
     print(statement_path)
+    print(statement_zh_path)
     print(solution_path)
     return 0
 
