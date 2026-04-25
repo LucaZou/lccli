@@ -7,7 +7,14 @@ from pathlib import Path
 
 from .client import LeetCodeClient, LeetCodeError, parse_cookie_string, slug_from_input
 from .config import CONFIG_FILE, Config
-from .files import default_solution_name, problem_dir, write_problem_files
+from .files import write_problem_files
+from .local_test import (
+    evaluate_case,
+    load_problem_from_cache,
+    load_solution_callable,
+    parse_cases,
+    parse_problem_meta,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -33,6 +40,14 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--testcase", help="Raw testcase text")
     run.add_argument("--testcase-file", help="Path to testcase file")
     run.add_argument("--timeout", type=float, default=60.0)
+
+    test = sub.add_parser("test", help="Run sample cases locally before remote submit")
+    test.add_argument("slug", help="Problem slug or URL")
+    test.add_argument("--file", required=True, help="Solution file path")
+    test.add_argument("--lang", help="Language slug")
+    test.add_argument("--testcase", help="Raw testcase text for local execution")
+    test.add_argument("--testcase-file", help="Path to testcase file")
+    test.add_argument("--expected", help="Expected output for manual testcase")
 
     submit = sub.add_parser("submit", help="Submit code to LeetCode")
     submit.add_argument("slug", help="Problem slug or URL")
@@ -80,6 +95,14 @@ def load_testcase(args: argparse.Namespace, sample: str) -> str:
     if args.testcase_file:
         return Path(args.testcase_file).read_text(encoding="utf-8")
     return sample
+
+
+def resolve_problem(config: Config, slug: str, file_path: Path):
+    cached = load_problem_from_cache(file_path)
+    if cached and cached.title_slug == slug:
+        return cached
+    client = LeetCodeClient(config)
+    return client.question_by_slug(slug)
 
 
 def cmd_login(args: argparse.Namespace) -> int:
@@ -154,6 +177,42 @@ def cmd_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_test(args: argparse.Namespace) -> int:
+    config = Config.load()
+    file_path = Path(args.file)
+    lang = infer_lang(file_path, args.lang, config.default_lang)
+    if lang != "python3":
+        raise SystemExit("local test currently supports python3 only")
+
+    slug = slug_from_input(args.slug)
+    problem = resolve_problem(config, slug, file_path)
+    meta = parse_problem_meta(problem)
+    code = file_path.read_text(encoding="utf-8")
+    testcase = load_testcase(args, "") if (args.testcase or args.testcase_file) else None
+    cases = parse_cases(problem, meta, testcase, args.expected)
+    if not cases:
+        raise SystemExit("no local testcases available")
+
+    callable_obj = load_solution_callable(code, meta)
+    results = [evaluate_case(callable_obj, meta, case) for case in cases]
+
+    failed = False
+    for index, result in enumerate(results, start=1):
+        status = "PASS" if result.ok is True else "FAIL" if result.ok is False else "DONE"
+        print(f"[{status}] case {index} ({result.source})")
+        print("inputs:")
+        for value in result.inputs:
+            print(value)
+        print("actual:")
+        print(json.dumps(result.actual, ensure_ascii=False))
+        if result.expected is not None:
+            print("expected:")
+            print(json.dumps(result.expected, ensure_ascii=False))
+        print()
+        failed = failed or result.ok is False
+    return 1 if failed else 0
+
+
 def cmd_submit(args: argparse.Namespace) -> int:
     config = Config.load()
     client = LeetCodeClient(config)
@@ -196,6 +255,7 @@ def main(argv: list[str] | None = None) -> int:
         "whoami": cmd_whoami,
         "fetch": cmd_fetch,
         "run": cmd_run,
+        "test": cmd_test,
         "submit": cmd_submit,
         "langs": cmd_langs,
         "config": cmd_config,

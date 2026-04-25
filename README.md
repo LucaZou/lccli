@@ -4,6 +4,7 @@
 
 - 登录当前 LeetCode CN 会话
 - 获取题目并生成本地目录
+- 本地运行样例
 - 运行代码
 - 提交代码
 
@@ -85,8 +86,32 @@ lccli fetch https://leetcode.cn/problems/two-sum/description/ --lang python3
 ```text
 0001-two-sum/
   README.md
+  problem.json
   solution.py
 ```
+
+## 本地测试
+
+优先用于提交前做样例验证。当前本地测试支持 `python3` 解法，覆盖：
+
+- 基础类型
+- 数组 / 矩阵
+- `ListNode`
+- `TreeNode`
+
+默认会尝试从题面里的示例提取输入和期望输出：
+
+```bash
+lccli test two-sum --file 0001-two-sum/solution.py
+```
+
+也可以手动给测试输入：
+
+```bash
+lccli test two-sum --file 0001-two-sum/solution.py --testcase $'[2,7,11,15]\n9' --expected '[0,1]'
+```
+
+如果只传 `--testcase` 不传 `--expected`，命令会执行并打印实际输出，但不会判定通过/失败。
 
 ## 运行代码
 
@@ -127,6 +152,7 @@ lccli langs --json
 
 - 目前只对 `leetcode.cn` 做了默认适配。
 - 登录是 Cookie 登录，不是账号密码登录。
+- 本地 `test` 目前只支持 `python3`，且主要面向常规 `Solution.method(...)` 题型。
 - `run`/`submit` 依赖当前 LeetCode 前端接口；如果站点改接口，需要同步调整。
 - 题目解析目前按 `slug` 或题目 URL 输入，不支持直接输入题号。
 - 题面会原样写入 Markdown，HTML 内容未做深度清洗。

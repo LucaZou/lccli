@@ -29,11 +29,16 @@ def write_problem_files(workspace: Path, problem: Problem, lang_slug: str) -> tu
     target_dir.mkdir(parents=True, exist_ok=True)
 
     statement_path = target_dir / "README.md"
+    metadata_path = target_dir / "problem.json"
     solution_name = default_solution_name(lang_slug)
     solution_path = target_dir / solution_name
 
     statement = render_problem_markdown(problem)
     statement_path.write_text(statement, encoding="utf-8")
+    metadata_path.write_text(
+        json.dumps(problem.to_dict(), ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
 
     if not solution_path.exists():
         solution_path.write_text(starter_code(problem, lang_slug), encoding="utf-8")
@@ -81,4 +86,3 @@ def default_solution_name(lang_slug: str) -> str:
         "rust": "solution.rs",
     }
     return mapping.get(lang_slug, f"solution.{lang_slug}")
-

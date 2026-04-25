@@ -169,7 +169,7 @@ class LeetCodeClient:
             referer=referer,
         )
 
-    def run_code(self, title_slug: str, lang: str, code: str, testcase: str) -> int:
+    def run_code(self, title_slug: str, lang: str, code: str, testcase: str) -> str:
         data = self._post_problem_action(
             title_slug,
             "interpret_solution",
@@ -183,7 +183,7 @@ class LeetCodeClient:
         interpretation_id = data.get("interpret_id") or data.get("interpretId")
         if not interpretation_id:
             raise LeetCodeError(f"Unexpected run response: {data}")
-        return int(interpretation_id)
+        return str(interpretation_id)
 
     def submit_code(self, title_slug: str, lang: str, code: str) -> int:
         data = self._post_problem_action(
@@ -200,7 +200,7 @@ class LeetCodeClient:
             raise LeetCodeError(f"Unexpected submit response: {data}")
         return int(submission_id)
 
-    def poll_check(self, submission_id: int, *, interval: float = 1.0, timeout: float = 60.0) -> RunResult:
+    def poll_check(self, submission_id: int | str, *, interval: float = 1.0, timeout: float = 60.0) -> RunResult:
         deadline = time.time() + timeout
         last = {}
         while time.time() < deadline:
@@ -253,4 +253,3 @@ def slug_from_input(value: str) -> str:
             if idx + 1 < len(parts):
                 return parts[idx + 1]
     return value
-
