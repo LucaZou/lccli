@@ -98,7 +98,12 @@ lccli fetch https://leetcode.cn/problems/two-sum/description/ --lang python3
 
 ## 本地测试
 
-优先用于提交前做样例验证。当前本地测试支持 `python3` 解法，覆盖：
+优先用于提交前做样例验证。当前本地测试支持：
+
+- `python3`
+- `cpp`
+
+当前实现主要面向常规 `Solution.method(...)` 题型，覆盖：
 
 - 基础类型
 - 数组 / 矩阵
@@ -154,11 +159,22 @@ lccli langs
 lccli langs --json
 ```
 
+## 本地环境检查
+
+检查本机是否安装了后续本地执行可能需要的语言工具链：
+
+```bash
+lccli doctor
+lccli doctor --json
+```
+
+这不会自动让所有语言都支持本地测试；它只是告诉你本地命令是否存在。
+
 ## 已知限制
 
 - 目前只对 `leetcode.cn` 做了默认适配。
 - 登录是 Cookie 登录，不是账号密码登录。
-- 本地 `test` 目前只支持 `python3`，且主要面向常规 `Solution.method(...)` 题型。
+- 本地 `test` 目前支持 `python3` 和 `cpp`，且主要面向常规 `Solution.method(...)` 题型。
 - `run`/`submit` 依赖当前 LeetCode 前端接口；如果站点改接口，需要同步调整。
 - 题目解析目前按 `slug` 或题目 URL 输入，不支持直接输入题号。
 - 题面会原样写入 Markdown，HTML 内容未做深度清洗。
@@ -172,4 +188,3 @@ lccli langs --json
 3. 加入 `test` 子命令，支持本地样例执行。
 4. 把返回结果整理成更友好的终端输出。
 5. 为常见语言生成更完整的本地工程模板。
-

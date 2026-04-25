@@ -7,11 +7,11 @@ from pathlib import Path
 
 from .client import LeetCodeClient, LeetCodeError, parse_cookie_string, slug_from_input
 from .config import CONFIG_FILE, Config
+from .doctor import inspect_all_languages
+from .executors import get_local_executor
 from .files import write_problem_files
 from .local_test import (
-    evaluate_case,
     load_problem_from_cache,
-    load_solution_callable,
     parse_cases,
     parse_problem_meta,
 )
@@ -57,6 +57,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     langs = sub.add_parser("langs", help="List supported remote languages")
     langs.add_argument("--json", action="store_true")
+
+    doctor = sub.add_parser("doctor", help="Inspect local toolchains for local execution")
+    doctor.add_argument("--json", action="store_true")
 
     config = sub.add_parser("config", help="Show config path or current config")
     config.add_argument("--path", action="store_true")
@@ -182,8 +185,9 @@ def cmd_test(args: argparse.Namespace) -> int:
     config = Config.load()
     file_path = Path(args.file)
     lang = infer_lang(file_path, args.lang, config.default_lang)
-    if lang != "python3":
-        raise SystemExit("local test currently supports python3 only")
+    executor = get_local_executor(lang)
+    if executor is None:
+        raise SystemExit(f"local test is not implemented for language: {lang}")
 
     slug = slug_from_input(args.slug)
     problem = resolve_problem(config, slug, file_path)
@@ -194,8 +198,7 @@ def cmd_test(args: argparse.Namespace) -> int:
     if not cases:
         raise SystemExit("no local testcases available")
 
-    callable_obj = load_solution_callable(code, meta)
-    results = [evaluate_case(callable_obj, meta, case) for case in cases]
+    results = executor.run_cases(code, meta, cases)
 
     failed = False
     for index, result in enumerate(results, start=1):
@@ -239,6 +242,22 @@ def cmd_langs(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_doctor(args: argparse.Namespace) -> int:
+    statuses = inspect_all_languages()
+    if args.json:
+        print(json.dumps([item.to_dict() for item in statuses], ensure_ascii=False, indent=2))
+        return 0
+    for item in statuses:
+        availability = "OK" if item.available else "MISSING"
+        local_test = "yes" if item.local_test_supported else "no"
+        print(f"{item.lang}\t{availability}\tlocal_test={local_test}")
+        for tool in item.tools:
+            state = tool.path if tool.path else "not found"
+            print(f"  {tool.name}: {state}")
+        print(f"  note: {item.notes}")
+    return 0
+
+
 def cmd_config(args: argparse.Namespace) -> int:
     if args.path:
         print(CONFIG_FILE)
@@ -259,6 +278,7 @@ def main(argv: list[str] | None = None) -> int:
         "test": cmd_test,
         "submit": cmd_submit,
         "langs": cmd_langs,
+        "doctor": cmd_doctor,
         "config": cmd_config,
     }
     try:

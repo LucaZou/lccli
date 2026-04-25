@@ -98,7 +98,12 @@ File layout:
 
 ## Local Testing
 
-Use this before submitting. Local testing currently supports `python3` solutions for common `Solution.method(...)` style problems, including:
+Use this before submitting. Local testing currently supports:
+
+- `python3`
+- `cpp`
+
+The current implementation targets common `Solution.method(...)` style problems and covers:
 
 - primitive types
 - arrays / matrices
@@ -154,11 +159,22 @@ lccli langs
 lccli langs --json
 ```
 
+## Local Toolchains
+
+Inspect which local runtimes and toolchains are available for future local execution:
+
+```bash
+lccli doctor
+lccli doctor --json
+```
+
+This does not enable local testing for every language by itself. It only reports whether the required local commands appear to be installed.
+
 ## Known Limitations
 
 - This is currently tailored to `leetcode.cn`.
 - Login is cookie-based, not username/password based.
-- Local `test` currently supports `python3` only.
+- Local `test` currently supports `python3` and `cpp` only.
 - `run` and `submit` depend on the current LeetCode web endpoints and may need updates if the site changes.
 - Problem lookup currently accepts a slug or problem URL, not a numeric problem id.
 - Problem statements are written to Markdown with minimal HTML cleanup.

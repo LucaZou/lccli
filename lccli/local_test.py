@@ -386,38 +386,48 @@ def parse_cases(problem: Problem, meta: dict, raw_testcase: str | None, expected
     return extract_example_cases(problem, meta)
 
 
+def deserialize_case_inputs(case: ExampleCase, params: list[dict]) -> list[Any]:
+    return [deserialize_value(raw, param.get("type")) for raw, param in zip(case.inputs, params)]
+
+
+def expected_case_value(meta: dict, case: ExampleCase, params: list[dict]) -> Any:
+    if case.expected_output is None:
+        return None
+    return_type = normalize_type(meta.get("return", {}).get("type"))
+    if return_type.lower() in {"void", "none", "null"}:
+        if not params:
+            return None
+        return deserialize_value(case.expected_output, params[0].get("type"))
+    return deserialize_value(case.expected_output, meta.get("return", {}).get("type"))
+
+
+def build_case_result(meta: dict, case: ExampleCase, actual: Any) -> CaseResult:
+    params = meta.get("params", [])
+    expected = expected_case_value(meta, case, params)
+    expected_serialized = serialize_value(expected) if case.expected_output is not None else None
+    actual_serialized = serialize_value(actual)
+    ok = None if case.expected_output is None else actual_serialized == expected_serialized
+    return CaseResult(
+        ok=ok,
+        inputs=case.inputs,
+        expected=expected_serialized,
+        actual=actual_serialized,
+        source=case.source,
+    )
+
+
 def evaluate_case(callable_obj: Any, meta: dict, case: ExampleCase) -> CaseResult:
     params = meta.get("params", [])
-    values = [deserialize_value(raw, param.get("type")) for raw, param in zip(case.inputs, params)]
+    values = deserialize_case_inputs(case, params)
     invoke_args = [clone_value(value) for value in values]
     result = callable_obj(*invoke_args)
 
     return_type = normalize_type(meta.get("return", {}).get("type"))
     if return_type.lower() in {"void", "none", "null"}:
         comparable = serialize_value(invoke_args[0]) if invoke_args else None
-        expected = (
-            deserialize_value(case.expected_output, params[0].get("type"))
-            if case.expected_output is not None and params
-            else None
-        )
     else:
         comparable = serialize_value(result)
-        expected = (
-            deserialize_value(case.expected_output, meta.get("return", {}).get("type"))
-            if case.expected_output is not None
-            else None
-        )
-
-    actual = serialize_value(comparable)
-    expected_serialized = serialize_value(expected) if case.expected_output is not None else None
-    ok = None if case.expected_output is None else actual == expected_serialized
-    return CaseResult(
-        ok=ok,
-        inputs=case.inputs,
-        expected=expected_serialized,
-        actual=actual,
-        source=case.source,
-    )
+    return build_case_result(meta, case, comparable)
 
 
 def load_problem_from_cache(file_path: Path) -> Problem | None:
